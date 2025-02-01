@@ -3,7 +3,7 @@ import streamlit as st
 import fitz  # PyMuPDF
 import pytesseract
 import pandas as pd
-from PIL import Image
+from PIL import Image, ImageEnhance, ImageFilter
 from io import BytesIO
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 
@@ -14,6 +14,14 @@ pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
 def clean_text(text):
     return ILLEGAL_CHARACTERS_RE.sub(r'', text)
 
+# Function to pre-process images
+def preprocess_image(img):
+    img = img.convert('L')  # Convert to grayscale
+    img = img.filter(ImageFilter.MedianFilter())  # Apply median filter
+    enhancer = ImageEnhance.Contrast(img)
+    img = enhancer.enhance(2)  # Enhance contrast
+    return img
+
 # Function to extract text from images in a PDF
 def extract_text_from_pdf(pdf_file):
     doc = fitz.open(stream=pdf_file.read(), filetype="pdf")
@@ -23,7 +31,8 @@ def extract_text_from_pdf(pdf_file):
         page = doc.load_page(page_num)
         pix = page.get_pixmap()
         img = Image.open(BytesIO(pix.tobytes("png")))
-        text = pytesseract.image_to_string(img)
+        img = preprocess_image(img)
+        text = pytesseract.image_to_string(img, config='--psm 6')  # Use page segmentation mode 6
         cleaned_text = clean_text(text)
         paragraphs = cleaned_text.split('\n\n')  # Split text into paragraphs
         for paragraph in paragraphs:
@@ -35,7 +44,8 @@ def extract_text_from_pdf(pdf_file):
 # Function to extract text from an image file
 def extract_text_from_image(image_file):
     img = Image.open(image_file)
-    text = pytesseract.image_to_string(img)
+    img = preprocess_image(img)
+    text = pytesseract.image_to_string(img, config='--psm 6')  # Use page segmentation mode 6
     cleaned_text = clean_text(text)
     paragraphs = cleaned_text.split('\n\n')  # Split text into paragraphs
     text_data = [{"Paragraph": paragraph.strip()} for paragraph in paragraphs if paragraph.strip()]
