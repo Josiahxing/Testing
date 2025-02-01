@@ -1,18 +1,43 @@
 import streamlit as st
-import random
+import fitz  # PyMuPDF
+import pytesseract
+import pandas as pd
+from io import BytesIO
 
-st.title("Number Guessing Game")
+# Function to extract text from images in a PDF
+def extract_text_from_pdf(pdf_file):
+    doc = fitz.open(stream=pdf_file.read(), filetype="pdf")
+    text_data = []
 
-if 'number' not in st.session_state:
-    st.session_state.number = random.randint(1, 100)
+    for page_num in range(len(doc)):
+        page = doc.load_page(page_num)
+        pix = page.get_pixmap()
+        img = pix.tobytes("png")
+        text = pytesseract.image_to_string(img)
+        text_data.append({"Page": page_num + 1, "Text": text})
 
-guess = st.number_input("Enter your guess:", min_value=1, max_value=100, step=1)
+    return text_data
 
-if st.button("Submit"):
-    if guess < st.session_state.number:
-        st.write("Too low!")
-    elif guess > st.session_state.number:
-        st.write("Too high!")
-    else:
-        st.write("Congratulations! You guessed the number.")
-        st.session_state.number = random.randint(1, 100)  # Reset the game
+# Streamlit app
+st.title("PDF Scanner")
+uploaded_file = st.file_uploader("Upload a PDF file", type="pdf")
+
+if uploaded_file is not None:
+    text_data = extract_text_from_pdf(uploaded_file)
+    df = pd.DataFrame(text_data)
+    
+    st.write("Extracted Text:")
+    st.dataframe(df)
+
+    # Export to Excel
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Extracted Text')
+    output.seek(0)
+
+    st.download_button(
+        label="Download Excel file",
+        data=output,
+        file_name="extracted_text.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
