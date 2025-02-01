@@ -32,7 +32,7 @@ def extract_text_from_pdf(pdf_file):
         pix = page.get_pixmap()
         img = Image.open(BytesIO(pix.tobytes("png")))
         img = preprocess_image(img)
-        text = pytesseract.image_to_string(img, config='--psm 6')  # Use page segmentation mode 6
+        text = pytesseract.image_to_string(img, config='--psm 6 -l eng')  # Use page segmentation mode 6 and English language
         cleaned_text = clean_text(text)
         paragraphs = cleaned_text.split('\n\n')  # Split text into paragraphs
         for paragraph in paragraphs:
@@ -45,7 +45,7 @@ def extract_text_from_pdf(pdf_file):
 def extract_text_from_image(image_file):
     img = Image.open(image_file)
     img = preprocess_image(img)
-    text = pytesseract.image_to_string(img, config='--psm 6')  # Use page segmentation mode 6
+    text = pytesseract.image_to_string(img, config='--psm 6 -l eng')  # Use page segmentation mode 6 and English language
     cleaned_text = clean_text(text)
     paragraphs = cleaned_text.split('\n\n')  # Split text into paragraphs
     text_data = [{"Paragraph": paragraph.strip()} for paragraph in paragraphs if paragraph.strip()]
