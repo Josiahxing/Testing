@@ -4,4 +4,3 @@ pytesseract
 pandas
 openpyxl
 Pillow
-tesseract-ocr
