@@ -1,9 +1,18 @@
+import re
 import streamlit as st
 import fitz  # PyMuPDF
 import pytesseract
 import pandas as pd
 from PIL import Image
 from io import BytesIO
+from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
+
+# Set the Tesseract executable path
+pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
+
+# Function to clean text data
+def clean_text(text):
+    return ILLEGAL_CHARACTERS_RE.sub(r'', text)
 
 # Function to extract text from images in a PDF
 def extract_text_from_pdf(pdf_file):
@@ -15,7 +24,8 @@ def extract_text_from_pdf(pdf_file):
         pix = page.get_pixmap()
         img = Image.open(BytesIO(pix.tobytes("png")))
         text = pytesseract.image_to_string(img)
-        text_data.append({"Page": page_num + 1, "Text": text})
+        cleaned_text = clean_text(text)
+        text_data.append({"Page": page_num + 1, "Text": cleaned_text})
 
     return text_data
 
