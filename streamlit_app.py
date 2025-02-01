@@ -2,6 +2,7 @@ import streamlit as st
 import fitz  # PyMuPDF
 import pytesseract
 import pandas as pd
+from PIL import Image
 from io import BytesIO
 
 # Function to extract text from images in a PDF
@@ -12,7 +13,7 @@ def extract_text_from_pdf(pdf_file):
     for page_num in range(len(doc)):
         page = doc.load_page(page_num)
         pix = page.get_pixmap()
-        img = pix.tobytes("png")
+        img = Image.open(BytesIO(pix.tobytes("png")))
         text = pytesseract.image_to_string(img)
         text_data.append({"Page": page_num + 1, "Text": text})
 
