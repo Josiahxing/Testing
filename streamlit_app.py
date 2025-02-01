@@ -25,7 +25,10 @@ def extract_text_from_pdf(pdf_file):
         img = Image.open(BytesIO(pix.tobytes("png")))
         text = pytesseract.image_to_string(img)
         cleaned_text = clean_text(text)
-        text_data.append({"Page": page_num + 1, "Text": cleaned_text})
+        paragraphs = cleaned_text.split('\n\n')  # Split text into paragraphs
+        for paragraph in paragraphs:
+            if paragraph.strip():  # Skip empty paragraphs
+                text_data.append({"Page": page_num + 1, "Paragraph": paragraph.strip()})
 
     return text_data
 
