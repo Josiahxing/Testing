@@ -32,12 +32,25 @@ def extract_text_from_pdf(pdf_file):
 
     return text_data
 
+# Function to extract text from an image file
+def extract_text_from_image(image_file):
+    img = Image.open(image_file)
+    text = pytesseract.image_to_string(img)
+    cleaned_text = clean_text(text)
+    paragraphs = cleaned_text.split('\n\n')  # Split text into paragraphs
+    text_data = [{"Paragraph": paragraph.strip()} for paragraph in paragraphs if paragraph.strip()]
+    return text_data
+
 # Streamlit app
-st.title("PDF Scanner")
-uploaded_file = st.file_uploader("Upload a PDF file", type="pdf")
+st.title("PDF and Image Scanner")
+uploaded_file = st.file_uploader("Upload a PDF or Image file", type=["pdf", "jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
-    text_data = extract_text_from_pdf(uploaded_file)
+    if uploaded_file.type == "application/pdf":
+        text_data = extract_text_from_pdf(uploaded_file)
+    else:
+        text_data = extract_text_from_image(uploaded_file)
+    
     df = pd.DataFrame(text_data)
     
     st.write("Extracted Text:")
