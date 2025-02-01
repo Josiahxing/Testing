@@ -40,6 +40,9 @@ if uploaded_file is not None:
     st.write("Extracted Text:")
     st.dataframe(df)
 
+    # Debugging: Print the DataFrame to the console
+    print(df)
+
     # Export to Excel
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
