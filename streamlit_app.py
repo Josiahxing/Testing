@@ -1,169 +1,72 @@
 import streamlit as st
-import random
-import time
+import pandas as pd
+import numpy as np
 
-# Sample sentences for the typing race
-sentences = [
-    "The quick brown fox jumps over the lazy dog.",
-    "Streamlit makes it easy to build web apps in Python.",
-    "Typing speed is measured in words per minute.",
-    "Practice makes perfect when it comes to typing.",
-    "Python is a versatile programming language."
-]
+def perform_lookup(df, lookup_column, lookup_value, return_columns):
+    """Performs the lookup operation on the DataFrame.
 
-# Select a random sentence
-sentence = random.choice(sentences)
+    Args:
+        df: The pandas DataFrame.
+        lookup_column: The name of the column to search within.
+        lookup_value: The value to search for.
+        return_columns: A list of column names to return.
 
-# Initialize session state variables
-if 'start_time' not in st.session_state:
-    st.session_state.start_time = None
-if 'highscore' not in st.session_state:
-    st.session_state.highscore = 0
+    Returns:
+        A pandas DataFrame containing the matching rows with selected columns, or None if no match is found.
+    """
+    if lookup_column not in df.columns:
+        st.error(f"Lookup column '{lookup_column}' not found in the uploaded file.")
+        return None
 
-st.title("Typing Racing Game")
-st.write("Type the following sentence as quickly as you can:")
+    try:
+      filtered_df = df[df[lookup_column].astype(str).str.lower() == str(lookup_value).lower()]
+    except:
+      st.error(f"The format of the lookup value or the lookup column is incorrect")
+      return None
 
-st.write(f"**{sentence}**")
+    if filtered_df.empty:
+        st.warning("No matching rows found.")
+        return None
 
-# Input field for user to type the sentence
-user_input = st.text_input("Start typing here:")
+    # Ensure return columns exist
+    invalid_return_columns = [col for col in return_columns if col not in df.columns]
+    if invalid_return_columns:
+        st.error(f"The following selected columns to return are invalid: {', '.join(invalid_return_columns)}")
+        return None
 
-# Start the timer when the user starts typing
-if user_input and st.session_state.start_time is None:
-    st.session_state.start_time = time.time()
+    return filtered_df[return_columns]
 
-# Calculate errors
-errors = sum(1 for a, b in zip(user_input, sentence) if a != b) + abs(len(user_input) - len(sentence))
+def main():
+    st.title("Audit Lookup App")
 
-# Highlight the current text position
-highlighted_sentence = ""
-for i, char in enumerate(sentence):
-    if i < len(user_input):
-        if user_input[i] == char:
-            highlighted_sentence += f"<span style='color: green;'>{char}</span>"
-        else:
-            highlighted_sentence += f"<span style='color: red;'>{char}</span>"
-    else:
-        highlighted_sentence += char
-st.markdown(f"**{highlighted_sentence}**", unsafe_allow_html=True)
+    uploaded_file = st.file_uploader("Upload your CSV or Excel file", type=["csv", "xlsx"])
 
-# Check if the user has finished typing the sentence
-if user_input == sentence:
-    end_time = time.time()
-    time_taken = end_time - st.session_state.start_time
-    words_per_minute = len(sentence.split()) / (time_taken / 60)
-    st.success(f"Congratulations! You finished in {time_taken:.2f} seconds.")
-    st.write(f"Your typing speed is {words_per_minute:.2f} words per minute.")
-    st.write(f"Number of errors: {errors}")
+    if uploaded_file is not None:
+        try:
+            if uploaded_file.type == "text/csv":
+                df = pd.read_csv(uploaded_file)
+            else:
+                df = pd.read_excel(uploaded_file)
 
-    # Update highscore
-    if words_per_minute > st.session_state.highscore:
-        st.session_state.highscore = words_per_minute
-        st.balloons()
-        st.write("New highscore!")
+            st.success("File successfully uploaded!")
 
-    st.write(f"Highscore: {st.session_state.highscore:.2f} WPM")
+            # User inputs
+            lookup_value = st.text_input("Enter the lookup value:")
+            lookup_column = st.selectbox("Select the lookup column:", df.columns)
+            return_columns = st.multiselect("Select the columns to return:", df.columns)
 
-# Display instructions
-st.write("Start typing the sentence above to begin the race!")
+            if st.button("Perform Lookup"):
+                if not lookup_value:
+                    st.error("Please enter a lookup value.")
+                elif not return_columns:
+                    st.error("Please select at least one column to return.")
+                else:
+                    results = perform_lookup(df, lookup_column, lookup_value, return_columns)
+                    if results is not None:
+                        st.dataframe(results)
 
-# Reset button
-if st.button("Reset"):
-    st.session_state.start_time = None
-    st.experimental_rerun()
-Run the Streamlit App: Run the app using the following command:
+        except Exception as e:
+            st.error(f"An error occurred while processing the file: {e}")
 
-streamlit run typing_race.py
-This updated code includes:
-
-Typing speed in WPM: Calculated and displayed after the user finishes typing.
-Error count: Counts and displays the number of errors made while typing.
-Highlighted text: Highlights correct characters in green and incorrect characters in red.
-Highscore system: Tracks and displays the highest WPM achieved so far.
-Give it a try and let me know how it goes! If you need any further assistance or want to add more features, feel free to ask.
-
-
-Edit in Pages
-
-
-AI-generated content may be incorrect
-You said:
-
-nothing  really changed when I added the cod with the "features"
-Copilot said:
-Copilot
-Let's troubleshoot and ensure the new features are working correctly. I'll provide a more detailed implementation to make sure everything is clear. Here's the enhanced code again with some additional comments for clarity:
-
-import streamlit as st
-import random
-import time
-
-# Sample sentences for the typing race
-sentences = [
-    "The quick brown fox jumps over the lazy dog.",
-    "Streamlit makes it easy to build web apps in Python.",
-    "Typing speed is measured in words per minute.",
-    "Practice makes perfect when it comes to typing.",
-    "Python is a versatile programming language."
-]
-
-# Select a random sentence
-sentence = random.choice(sentences)
-
-# Initialize session state variables
-if 'start_time' not in st.session_state:
-    st.session_state.start_time = None
-if 'highscore' not in st.session_state:
-    st.session_state.highscore = 0
-
-st.title("Typing Racing Game")
-st.write("Type the following sentence as quickly as you can:")
-
-st.write(f"**{sentence}**")
-
-# Input field for user to type the sentence
-user_input = st.text_input("Start typing here:")
-
-# Start the timer when the user starts typing
-if user_input and st.session_state.start_time is None:
-    st.session_state.start_time = time.time()
-
-# Calculate errors
-errors = sum(1 for a, b in zip(user_input, sentence) if a != b) + abs(len(user_input) - len(sentence))
-
-# Highlight the current text position
-highlighted_sentence = ""
-for i, char in enumerate(sentence):
-    if i < len(user_input):
-        if user_input[i] == char:
-            highlighted_sentence += f"<span style='color: green;'>{char}</span>"
-        else:
-            highlighted_sentence += f"<span style='color: red;'>{char}</span>"
-    else:
-        highlighted_sentence += char
-st.markdown(f"**{highlighted_sentence}**", unsafe_allow_html=True)
-
-# Check if the user has finished typing the sentence
-if user_input == sentence:
-    end_time = time.time()
-    time_taken = end_time - st.session_state.start_time
-    words_per_minute = len(sentence.split()) / (time_taken / 60)
-    st.success(f"Congratulations! You finished in {time_taken:.2f} seconds.")
-    st.write(f"Your typing speed is {words_per_minute:.2f} words per minute.")
-    st.write(f"Number of errors: {errors}")
-
-    # Update highscore
-    if words_per_minute > st.session_state.highscore:
-        st.session_state.highscore = words_per_minute
-        st.balloons()
-        st.write("New highscore!")
-
-    st.write(f"Highscore: {st.session_state.highscore:.2f} WPM")
-
-# Display instructions
-st.write("Start typing the sentence above to begin the race!")
-
-# Reset button
-if st.button("Reset"):
-    st.session_state.start_time = None
-    st.experimental_rerun()
+if __name__ == "__main__":
+    main()
