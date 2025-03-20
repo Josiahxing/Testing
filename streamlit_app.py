@@ -79,6 +79,6 @@ if uploaded_file is not None:
             'Location In Picking?': location_in_picking(scanned_loc, cisco_inventory_df),
             'Missing LPN\'s By LOC': ""  # This will be updated later
         }
-        cycle_count_df = cycle_count_df.append(new_row, ignore_index=True)
+        cycle_count_df = pd.concat([cycle_count_df, pd.DataFrame([new_row])], ignore_index=True)
     
     st.dataframe(cycle_count_df)
