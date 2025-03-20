@@ -47,8 +47,14 @@ st.title('Cycle Count Auditing Tool')
 
 uploaded_file = st.file_uploader("Choose a file", type="xlsx")
 if uploaded_file is not None:
-    cycle_count_df = pd.read_excel(uploaded_file, sheet_name='CycleCount')
     cisco_inventory_df = pd.read_excel(uploaded_file, sheet_name='CiscoInventorySnapshot')
+    
+    # Create a DataFrame to simulate the CycleCount sheet
+    cycle_count_df = pd.DataFrame(columns=[
+        'Scanned LOC', 'Scanned LPN', 'QTY Scanned', 'Short Comment', 'Comment', 'Timestamp', 
+        'SKU', 'LOC Check', 'QTY Remaining LPN', 'QTY Remaining in LOC', 'Location In Picking?', 
+        'Missing LPN\'s By LOC'
+    ])
     
     # Perform calculations
     cycle_count_df['SKU'] = cycle_count_df['Scanned LPN'].apply(lambda x: get_sku(x, cisco_inventory_df))
