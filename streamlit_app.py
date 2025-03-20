@@ -56,11 +56,29 @@ if uploaded_file is not None:
         'Missing LPN\'s By LOC'
     ])
     
-    # Perform calculations
-    cycle_count_df['SKU'] = cycle_count_df['Scanned LPN'].apply(lambda x: get_sku(x, cisco_inventory_df))
-    cycle_count_df['LOC Check'] = cycle_count_df.apply(lambda row: loc_check(row['Scanned LOC'], row['Scanned LPN'], cisco_inventory_df), axis=1)
-    cycle_count_df['QTY Remaining LPN'] = cycle_count_df.apply(lambda row: qty_remaining_lpn(row['Scanned LOC'], row['Scanned LPN'], row['LOC Check'], cisco_inventory_df, cycle_count_df), axis=1)
-    cycle_count_df['QTY Remaining in LOC'] = cycle_count_df['Scanned LOC'].apply(lambda x: qty_remaining_loc(x, cisco_inventory_df, cycle_count_df))
-    cycle_count_df['Location In Picking?'] = cycle_count_df['Scanned LOC'].apply(lambda x: location_in_picking(x, cisco_inventory_df))
+    # Input fields for scanning
+    scanned_loc = st.text_input("Scanned LOC")
+    scanned_lpn = st.text_input("Scanned LPN")
+    qty_scanned = st.number_input("QTY Scanned", min_value=0, step=1)
+    short_comment = st.text_input("Short Comment")
+    comment = st.text_area("Comment")
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    if st.button("Add Scan"):
+        new_row = {
+            'Scanned LOC': scanned_loc,
+            'Scanned LPN': scanned_lpn,
+            'QTY Scanned': qty_scanned,
+            'Short Comment': short_comment,
+            'Comment': comment,
+            'Timestamp': timestamp,
+            'SKU': get_sku(scanned_lpn, cisco_inventory_df),
+            'LOC Check': loc_check(scanned_loc, scanned_lpn, cisco_inventory_df),
+            'QTY Remaining LPN': qty_remaining_lpn(scanned_loc, scanned_lpn, loc_check(scanned_loc, scanned_lpn, cisco_inventory_df), cisco_inventory_df, cycle_count_df),
+            'QTY Remaining in LOC': qty_remaining_loc(scanned_loc, cisco_inventory_df, cycle_count_df),
+            'Location In Picking?': location_in_picking(scanned_loc, cisco_inventory_df),
+            'Missing LPN\'s By LOC': ""  # This will be updated later
+        }
+        cycle_count_df = cycle_count_df.append(new_row, ignore_index=True)
     
     st.dataframe(cycle_count_df)
