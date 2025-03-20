@@ -1,72 +1,60 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+from datetime import datetime
 
-def perform_lookup(df, lookup_column, lookup_value, return_columns):
-    """Performs the lookup operation on the DataFrame.
+# Define functions for calculations
+def get_sku(scanned_lpn, inventory_df):
+    if scanned_lpn == "":
+        return ""
+    result = inventory_df[inventory_df['LPN'] == scanned_lpn]['Sku']
+    return result.values[0] if not result.empty else "Incorrect"
 
-    Args:
-        df: The pandas DataFrame.
-        lookup_column: The name of the column to search within.
-        lookup_value: The value to search for.
-        return_columns: A list of column names to return.
+def loc_check(scanned_loc, scanned_lpn, inventory_df):
+    if scanned_loc == "" or scanned_lpn == "":
+        return ""
+    if not inventory_df[(inventory_df['Location'] == scanned_loc) & (inventory_df['LPN'] == scanned_lpn)].empty:
+        return "Correct"
+    elif not inventory_df[inventory_df['LPN'] == scanned_lpn].empty:
+        correct_loc = inventory_df[inventory_df['LPN'] == scanned_lpn]['Location'].values[0]
+        return f"Incorrect - Should be at {correct_loc}"
+    else:
+        return "Incorrect"
 
-    Returns:
-        A pandas DataFrame containing the matching rows with selected columns, or None if no match is found.
-    """
-    if lookup_column not in df.columns:
-        st.error(f"Lookup column '{lookup_column}' not found in the uploaded file.")
-        return None
+def qty_remaining_lpn(scanned_loc, scanned_lpn, loc_check_result, inventory_df, cycle_count_df):
+    if scanned_loc == "" or scanned_lpn == "":
+        return ""
+    if loc_check_result == "Incorrect":
+        return "Incorrect"
+    inventory_qty = inventory_df[inventory_df['LPN'] == scanned_lpn]['Qty'].sum()
+    scanned_qty = cycle_count_df[cycle_count_df['Scanned LPN'] == scanned_lpn]['QTY Scanned'].sum()
+    return inventory_qty - scanned_qty
 
-    try:
-      filtered_df = df[df[lookup_column].astype(str).str.lower() == str(lookup_value).lower()]
-    except:
-      st.error(f"The format of the lookup value or the lookup column is incorrect")
-      return None
+def qty_remaining_loc(scanned_loc, inventory_df, cycle_count_df):
+    if scanned_loc == "":
+        return ""
+    inventory_qty = inventory_df[inventory_df['Location'] == scanned_loc]['Qty'].sum()
+    scanned_qty = cycle_count_df[cycle_count_df['Scanned LOC'] == scanned_loc]['QTY Scanned'].sum()
+    return inventory_qty - scanned_qty
 
-    if filtered_df.empty:
-        st.warning("No matching rows found.")
-        return None
+def location_in_picking(scanned_loc, carton_billing_df):
+    if scanned_loc == "":
+        return ""
+    return "In Picking" if scanned_loc in carton_billing_df['Location'].values else "Not In Picking"
 
-    # Ensure return columns exist
-    invalid_return_columns = [col for col in return_columns if col not in df.columns]
-    if invalid_return_columns:
-        st.error(f"The following selected columns to return are invalid: {', '.join(invalid_return_columns)}")
-        return None
+# Streamlit app layout
+st.title('Cycle Count Auditing Tool')
 
-    return filtered_df[return_columns]
-
-def main():
-    st.title("Audit Lookup App")
-
-    uploaded_file = st.file_uploader("Upload your CSV or Excel file", type=["csv", "xlsx"])
-
-    if uploaded_file is not None:
-        try:
-            if uploaded_file.type == "text/csv":
-                df = pd.read_csv(uploaded_file)
-            else:
-                df = pd.read_excel(uploaded_file)
-
-            st.success("File successfully uploaded!")
-
-            # User inputs
-            lookup_value = st.text_input("Enter the lookup value:")
-            lookup_column = st.selectbox("Select the lookup column:", df.columns)
-            return_columns = st.multiselect("Select the columns to return:", df.columns)
-
-            if st.button("Perform Lookup"):
-                if not lookup_value:
-                    st.error("Please enter a lookup value.")
-                elif not return_columns:
-                    st.error("Please select at least one column to return.")
-                else:
-                    results = perform_lookup(df, lookup_column, lookup_value, return_columns)
-                    if results is not None:
-                        st.dataframe(results)
-
-        except Exception as e:
-            st.error(f"An error occurred while processing the file: {e}")
-
-if __name__ == "__main__":
-    main()
+uploaded_file = st.file_uploader("Choose a file", type="xlsx")
+if uploaded_file is not None:
+    cycle_count_df = pd.read_excel(uploaded_file, sheet_name='CycleCount')
+    cisco_inventory_df = pd.read_excel(uploaded_file, sheet_name='CiscoInventorySnapshot')
+    
+    # Perform calculations
+    cycle_count_df['SKU'] = cycle_count_df['Scanned LPN'].apply(lambda x: get_sku(x, cisco_inventory_df))
+    cycle_count_df['LOC Check'] = cycle_count_df.apply(lambda row: loc_check(row['Scanned LOC'], row['Scanned LPN'], cisco_inventory_df), axis=1)
+    cycle_count_df['QTY Remaining LPN'] = cycle_count_df.apply(lambda row: qty_remaining_lpn(row['Scanned LOC'], row['Scanned LPN'], row['LOC Check'], cisco_inventory_df, cycle_count_df), axis=1)
+    cycle_count_df['QTY Remaining in LOC'] = cycle_count_df['Scanned LOC'].apply(lambda x: qty_remaining_loc(x, cisco_inventory_df, cycle_count_df))
+    cycle_count_df['Location In Picking?'] = cycle_count_df['Scanned LOC'].apply(lambda x: location_in_picking(x, cisco_inventory_df))
+    
+    st.dataframe(cycle_count_df)
