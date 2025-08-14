@@ -2,14 +2,25 @@ import streamlit as st
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
-st.title("Selenium + Streamlit Example")
+st.title("Streamlit + Selenium Demo")
 
-if st.button("Run Selenium Task"):
+url = st.text_input("Enter a URL to visit")
+
+if st.button("Get Page Title"):
+    # Set up headless Chrome
     options = Options()
-    options.add_argument("--headless")  # Optional: run without opening browser window
+    options.add_argument("--headless")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
+
+    # Path to your ChromeDriver (adjust if needed)
     driver = webdriver.Chrome(options=options)
 
-    driver.get("https://example.com")
-    st.write("Page title:", driver.title)
-
-    driver.quit()
+    try:
+        driver.get(url)
+        title = driver.title
+        st.success(f"Page Title: {title}")
+    except Exception as e:
+        st.error(f"Error: {e}")
+    finally:
+        driver.quit()
