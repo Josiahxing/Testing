@@ -2,27 +2,14 @@ import streamlit as st
 import fitz  # PyMuPDF
 import io
 
-# Title of the app
-st.title("📄 PDF Combiner and Copier App")
+st.title("PDF Combiner + JS Script Generator")
 
-# Upload multiple PDF files
-uploaded_files = st.file_uploader(
-    "Upload PDF files to combine", 
-    type="pdf", 
-    accept_multiple_files=True
-)
+# --- PDF Combiner Section ---
+st.header("📎 Combine PDFs with Copies")
 
-# Input for number of copies
-num_copies = st.number_input(
-    "# of Copies", 
-    min_value=1, 
-    max_value=4, 
-    value=1, 
-    step=1,
-    help="Each page will be duplicated this many times in the final PDF."
-)
+uploaded_files = st.file_uploader("Upload PDF files", type="pdf", accept_multiple_files=True)
+num_copies = st.number_input("# of Copies", min_value=1, max_value=4, value=1, step=1)
 
-# Combine button
 if st.button("Combine PDFs") and uploaded_files:
     combined_pdf = fitz.open()
 
@@ -38,10 +25,25 @@ if st.button("Combine PDFs") and uploaded_files:
     combined_pdf.close()
     output.seek(0)
 
-    st.success("✅ PDF combined successfully!")
     st.download_button(
-        label="📥 Download Combined PDF",
+        label="Download Combined PDF",
         data=output,
         file_name="combined.pdf",
         mime="application/pdf"
     )
+
+# --- JavaScript Generator Section ---
+st.header("📜 Generate JavaScript for Order Downloads")
+
+order_input = st.text_area("Enter Order Numbers (comma or newline separated):")
+
+if st.button("Generate Script") and order_input:
+    orders = [o.strip() for o in order_input.replace('\n', ',').split(',') if o.strip()]
+    script_lines = ['<script>']
+    for order in orders:
+        script_lines.append(f'window.open("https://yourserver.com/downloads/order_{order}.pdf", "_blank");')
+    script_lines.append('</script>')
+    script = '\n'.join(script_lines)
+
+    st.code(script, language='html')
+    st.text_input("Copy the script below:", value=script)
