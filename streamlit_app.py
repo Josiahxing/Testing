@@ -1,29 +1,28 @@
 import streamlit as st
 import fitz  # PyMuPDF
-import tempfile
-import os
+import io
 
-st.title("📄 PDF Batch Printer")
+st.title("PDF Combiner App")
 
-uploaded_files = st.file_uploader("Upload PDF files to print", type=["pdf"], accept_multiple_files=True)
+uploaded_files = st.file_uploader("Upload PDF files to combine", type="pdf", accept_multiple_files=True)
 
-if uploaded_files:
-    st.success(f"{len(uploaded_files)} PDF file(s) uploaded.")
+if st.button("Combine PDFs") and uploaded_files:
+    combined_pdf = fitz.open()
 
     for uploaded_file in uploaded_files:
-        st.write(f"🖨️ Printing: {uploaded_file.name}")
+        pdf_bytes = uploaded_file.read()
+        pdf_doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        for page in pdf_doc:
+            combined_pdf.insert_pdf(pdf_doc, from_page=page.number, to_page=page.number)
 
-        # Save the uploaded file to a temporary location
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-            tmp_file.write(uploaded_file.read())
-            tmp_file_path = tmp_file.name
+    output = io.BytesIO()
+    combined_pdf.save(output)
+    combined_pdf.close()
+    output.seek(0)
 
-        # Open the PDF using PyMuPDF to ensure it's valid
-        try:
-            doc = fitz.open(tmp_file_path)
-            doc.close()
-
-            # Send the file to the system's default printer
-            os.startfile(tmp_file_path, "print")
-        except Exception as e:
-            st.error(f"❌ Failed to print {uploaded_file.name}: {e}")
+    st.download_button(
+        label="Download Combined PDF",
+        data=output,
+        file_name="combined.pdf",
+        mime="application/pdf"
+    )
