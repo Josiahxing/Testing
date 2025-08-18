@@ -3,37 +3,27 @@ import fitz  # PyMuPDF
 import tempfile
 import os
 
-st.title("🖨️ PDF Print Manager")
+st.title("📄 PDF Batch Printer")
 
-st.markdown("""
-Upload multiple PDF files and specify how many copies of each you'd like to print. 
-Click 'Print All' to simulate printing.
-""")
+uploaded_files = st.file_uploader("Upload PDF files to print", type=["pdf"], accept_multiple_files=True)
 
-uploaded_files = st.file_uploader("Upload PDF files", type=["pdf"], accept_multiple_files=True)
-
-copies = {}
 if uploaded_files:
-    st.subheader("Uploaded Files and Copy Settings")
-    for file in uploaded_files:
-        file_name = file.name
-        copies[file_name] = st.number_input(f"Copies for {file_name}", min_value=1, max_value=100, value=1)
+    st.success(f"{len(uploaded_files)} PDF file(s) uploaded.")
 
-if st.button("Print All"):
-    if not uploaded_files:
-        st.warning("Please upload at least one PDF file.")
-    else:
-        for file in uploaded_files:
-            file_name = file.name
-            num_copies = copies[file_name]
-            try:
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-                    tmp.write(file.read())
-                    tmp_path = tmp.name
+    for uploaded_file in uploaded_files:
+        st.write(f"🖨️ Printing: {uploaded_file.name}")
 
-                doc = fitz.open(tmp_path)
-                st.success(f"🖨️ Printing {num_copies} copies of '{file_name}' ({doc.page_count} pages)")
-                doc.close()
-                os.remove(tmp_path)
-            except Exception as e:
-                st.error(f"❌ Failed to print '{file_name}': {e}")
+        # Save the uploaded file to a temporary location
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+            tmp_file.write(uploaded_file.read())
+            tmp_file_path = tmp_file.name
+
+        # Open the PDF using PyMuPDF to ensure it's valid
+        try:
+            doc = fitz.open(tmp_file_path)
+            doc.close()
+
+            # Send the file to the system's default printer
+            os.startfile(tmp_file_path, "print")
+        except Exception as e:
+            st.error(f"❌ Failed to print {uploaded_file.name}: {e}")
