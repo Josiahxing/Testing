@@ -1,26 +1,39 @@
 import streamlit as st
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+import fitz  # PyMuPDF
+import tempfile
+import os
 
-st.title("Streamlit + Selenium Demo")
+st.title("🖨️ PDF Print Manager")
 
-url = st.text_input("Enter a URL to visit")
+st.markdown("""
+Upload multiple PDF files and specify how many copies of each you'd like to print. 
+Click 'Print All' to simulate printing.
+""")
 
-if st.button("Get Page Title"):
-    # Set up headless Chrome
-    options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--no-sandbox")
+uploaded_files = st.file_uploader("Upload PDF files", type=["pdf"], accept_multiple_files=True)
 
-    # Path to your ChromeDriver (adjust if needed)
-    driver = webdriver.Chrome(options=options)
+copies = {}
+if uploaded_files:
+    st.subheader("Uploaded Files and Copy Settings")
+    for file in uploaded_files:
+        file_name = file.name
+        copies[file_name] = st.number_input(f"Copies for {file_name}", min_value=1, max_value=100, value=1)
 
-    try:
-        driver.get(url)
-        title = driver.title
-        st.success(f"Page Title: {title}")
-    except Exception as e:
-        st.error(f"Error: {e}")
-    finally:
-        driver.quit()
+if st.button("Print All"):
+    if not uploaded_files:
+        st.warning("Please upload at least one PDF file.")
+    else:
+        for file in uploaded_files:
+            file_name = file.name
+            num_copies = copies[file_name]
+            try:
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                    tmp.write(file.read())
+                    tmp_path = tmp.name
+
+                doc = fitz.open(tmp_path)
+                st.success(f"🖨️ Printing {num_copies} copies of '{file_name}' ({doc.page_count} pages)")
+                doc.close()
+                os.remove(tmp_path)
+            except Exception as e:
+                st.error(f"❌ Failed to print '{file_name}': {e}")
